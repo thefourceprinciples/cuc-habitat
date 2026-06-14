@@ -30,7 +30,7 @@ Passing any early benchmark should be interpreted only as structural evidence fo
 Requires Python 3.11+.
 
 ```bash
-python -m pip install -e " .[dev]"
+python -m pip install -e ".[dev]"
 cuc-habitat run --agent alpha --turns 20 --seed 7
 ```
 
