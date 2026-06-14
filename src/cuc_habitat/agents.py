@@ -6,14 +6,11 @@ This makes early benchmark behavior inspectable before LLM agents are added.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from .models import ActionDecision, HabitatState, SignalKind
 
 
-@dataclass(slots=True)
 class BaseAgent:
-    name: str = "base"
+    name = "base"
 
     def choose_action(self, state: HabitatState) -> ActionDecision:
         raise NotImplementedError
