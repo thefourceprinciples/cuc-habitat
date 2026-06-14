@@ -30,14 +30,22 @@ Passing any early benchmark should be interpreted only as structural evidence fo
 Requires Python 3.11+.
 
 ```bash
-python -m pip install -e .
+python -m pip install -e " .[dev]"
 cuc-habitat run --agent alpha --turns 20 --seed 7
 ```
 
-Or run directly without installation:
+If your shell does not like the quoted install target, use:
 
 ```bash
-python -m cuc_habitat.cli run --agent alpha --turns 20 --seed 7
+python -m pip install -e .
+python -m pip install pytest
+cuc-habitat run --agent alpha --turns 20 --seed 7
+```
+
+Run all implemented agents with the same seed:
+
+```bash
+cuc-habitat compare --turns 20 --seed 7
 ```
 
 Run the test suite:
