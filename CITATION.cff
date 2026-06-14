@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this repository, please cite it using the metadata below."
+title: "CUC Habitat: A Minimal Benchmark for Coherence Under Constraint"
+authors:
+  - family-names: "Fry"
+    given-names: "Gage"
+version: "0.1.0"
+date-released: "2026-06-14"
+license: "MIT"
+repository-code: "https://github.com/thefourceprinciples/cuc-habitat"
+abstract: "A minimal executable benchmark environment for testing agent coherence, continuity, self-regulation, and consequence-sensitive behavior under constraint."
