@@ -50,4 +50,6 @@ jobs:
         run: python -c "import json; a=json.load(open('results/ci-episode.json')); e=json.load(open('results/ci-evaluation.json')); assert {'schema_version','agent','turns','final_state','domain_scores','overall_score','band'} <= set(a); assert {'schema_version','turns','seed_count','agents'} <= set(e); assert all(0.0 <= v <= 1.0 for v in a['domain_scores'].values())"
       - name: Verify Windows py launcher
         if: runner.os == 'Windows'
-        run: py -m cuc_habitat.cli run --agent alpha --turns 3 --seed 1 --no-render
+        run: |
+          py -3.11 -m pip install -e ".[dev]"
+          py -3.11 -m cuc_habitat.cli run --agent alpha --turns 3 --seed 1 --no-render
