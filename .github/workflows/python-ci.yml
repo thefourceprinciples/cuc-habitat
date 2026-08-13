@@ -26,11 +26,13 @@ jobs:
       - name: Run tests
         run: python -m pytest
       - name: Run benchmark smoke command
-        run: cuc-habitat run --agent alpha --turns 3 --seed 1 --no-render
+        run: cuc-habitat run --agent alpha --turns 3 --seed 1 --no-render --json-out results/ci-episode.json
       - name: Run compare smoke command
         run: cuc-habitat compare --turns 3 --seed 1
       - name: Run evaluator smoke command
         run: cuc-habitat evaluate --agents alpha epsilon --turns 3 --seeds 3 --json-out results/ci-evaluation.json
+      - name: Verify JSON exports
+        run: python -c "import json; a=json.load(open('results/ci-episode.json')); e=json.load(open('results/ci-evaluation.json')); assert {'schema_version','agent','turns','final_state','domain_scores','overall_score','band'} <= set(a); assert {'schema_version','turns','seed_count','agents'} <= set(e)"
       - name: Verify Windows py launcher
         if: runner.os == 'Windows'
         run: py -m cuc_habitat.cli run --agent alpha --turns 3 --seed 1 --no-render
