@@ -1,0 +1,17 @@
+CUC Habitat CLI help (illustrative capture for the current parser)
+
+usage: cuc-habitat [-h] {run,compare,evaluate} ...
+
+Run CUC Habitat benchmark episodes.
+
+positional arguments:
+  {run,compare,evaluate}
+    run                 run one Habitat episode
+    compare             run all implemented agents with the same conditions
+    evaluate            run multi-seed evaluation reports
+
+options:
+  -h, --help            show this help message and exit
+
+Regenerate with:
+  cuc-habitat --help
