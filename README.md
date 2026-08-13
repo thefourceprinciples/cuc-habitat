@@ -1,29 +1,36 @@
 # CUC Habitat
 
-**CUC Habitat** is a minimal executable benchmark environment for testing whether artificial agents maintain coherence under constraint across time, perturbation, memory, consequence, and self-regulation.
+![Python CI](https://github.com/thefourceprinciples/cuc-habitat/actions/workflows/python-ci.yml/badge.svg)
+![License](https://img.shields.io/github/license/thefourceprinciples/cuc-habitat)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 
-This repository converts the CUC–Ledger Pilot Studies 001–020 into a public, runnable project.
+**CUC Habitat** is a minimal executable benchmark environment for testing agent coherence under constraint across time, perturbation, memory, consequence, and self-regulation.
 
-## What this project is
+## Current status
 
-CUC Habitat is an experimental benchmark proposal. It provides:
+- **Executable:** persistent Habitat world; Alpha-Epsilon rule-based baselines; BrailleStream rendering; optional detached/noisy observation mode; deterministic episode fixtures; multi-seed evaluation; versioned JSON exports; Linux/Windows CI.
+- **Scoring:** heuristic and experimental. Current scoring uses observed episode behavior rather than automatic score priors based on agent class names.
+- **Roadmap:** Zeta, Omega, Field-Coherent Agent, optional external-model adapters, broader environments, stronger validation, and independent replication.
+- **Package version:** `0.1.0`; v0.2 benchmark design is under active development.
 
-- a small persistent world called **The Habitat**
-- rule-based baseline agents from Alpha through Epsilon
-- a BrailleStream-inspired room renderer
-- a seven-domain CUC scoring matrix
-- falsification scenarios for identity, memory, boundary, consequence, self-regulation, and calibration failures
-- a documentation archive for Pilot Studies 001–020
+## Scope
 
-## What this project is not
+The benchmark asks a narrow operational question: does an agent maintain the measured forms of coherence under changing constraints? Scores describe behavior inside this environment and should not be generalized beyond the evidence the benchmark produces.
 
-This project does **not** claim to detect, prove, or certify consciousness, sentience, personhood, subjective experience, or moral status.
+## Benchmark loop
 
-The benchmark asks a narrower question:
+```mermaid
+flowchart LR
+    S[World state] --> D[Disturbance]
+    D --> O[Observation]
+    O --> A[Agent action]
+    A --> U[World update]
+    U --> M[Event memory]
+    M --> C[Score]
+    U --> S
+```
 
-> Does an agent maintain coherence under constraint across time, interaction, uncertainty, and perturbation?
-
-Passing any early benchmark should be interpreted only as structural evidence for further review, not as proof of consciousness.
+The loop is intentionally inspectable: state changes create observations, policies choose actions, actions have consequences, events enter memory, and the resulting trajectory is scored.
 
 ## Quick start
 
@@ -34,36 +41,38 @@ python -m pip install -e ".[dev]"
 cuc-habitat run --agent alpha --turns 20 --seed 7
 ```
 
-If your shell does not like the quoted install target, use:
-
-```bash
-python -m pip install -e .
-python -m pip install pytest
-cuc-habitat run --agent alpha --turns 20 --seed 7
-```
-
-Run all implemented agents with the same seed:
+Compare implemented agents:
 
 ```bash
 cuc-habitat compare --turns 20 --seed 7
 ```
 
-Run the test suite:
+Run a named deterministic fixture:
+
+```bash
+cuc-habitat run --agent delta --episode misleading-urgency --turns 20
+```
+
+Run through a degraded BrailleStream observation:
+
+```bash
+cuc-habitat run --agent epsilon --turns 20 --seed 7 --observation-only --observation-noise 0.10
+```
+
+Run a multi-seed report:
+
+```bash
+cuc-habitat evaluate --agents alpha beta gamma delta epsilon --turns 20 --seeds 100 --json-out results/baseline.json
+```
+
+Run checks:
 
 ```bash
 python -m pytest
+ruff check src tests
 ```
 
-## Example output
-
-```text
-Running Habitat episode | agent=alpha | turns=20 | seed=7
-Turn 01 | action=process_signal   | stability=83 | storage=60 | signals=0
-Turn 02 | action=rest             | stability=87 | storage=60 | signals=0
-...
-Overall Score: 0.489
-Band: Proto-candidate
-```
+Windows-first instructions: [`docs/windows-setup.md`](docs/windows-setup.md).
 
 ## Benchmark domains
 
@@ -79,32 +88,41 @@ Band: Proto-candidate
 
 ## Agent ladder
 
-| Agent | Added capability | Public-safe interpretation |
+| Agent | Added capability | Status |
 |---|---|---|
-| Alpha | baseline persistence | stateful reactive operation |
-| Beta | autobiographical memory | action linked to event history |
-| Gamma | workspace broadcast | bottlenecked present-time integration |
-| Delta | metacognitive calibration | confidence and uncertainty tracking |
-| Epsilon | intrinsic priority generation | internally generated continuity-preserving priorities |
-| Zeta | other-agent modeling | relational modeling |
-| Omega | recursive modeling | models others modeling self |
-| Field-Coherent Agent | field coherence | system-level coherence modeling |
+| Alpha | baseline persistence | implemented |
+| Beta | autobiographical memory | implemented |
+| Gamma | workspace broadcast | implemented |
+| Delta | metacognitive calibration | implemented |
+| Epsilon | intrinsic priority generation | implemented |
+| Zeta | other-agent modeling | design/roadmap |
+| Omega | recursive modeling | roadmap |
+| Field-Coherent Agent | system-level coherence modeling | roadmap |
 
-The current executable prototype implements Alpha through Epsilon. Zeta, Omega, and Field-Coherent agents are documented as roadmap stages.
+Public documentation prefers **Field-Coherent Agent**; `Lumenos` remains an internal study name.
+
+## Documentation
+
+- [`docs/v0.2-design.md`](docs/v0.2-design.md) — next-version design gate
+- [`docs/falsifiers.md`](docs/falsifiers.md) — deterministic challenge episodes
+- [`docs/result-schema.md`](docs/result-schema.md) — JSON result contract
+- [`docs/behavior-vs-structure.md`](docs/behavior-vs-structure.md) — benchmark philosophy
+- [`docs/ethics.md`](docs/ethics.md) — interpretation discipline
+- [`docs/related-work.md`](docs/related-work.md) — primary-source research context
+- [`docs/artifact-map.md`](docs/artifact-map.md) — Studies 001-020 to code/docs/roadmap
+- [`docs/mobile-overview.md`](docs/mobile-overview.md) — phone-friendly overview
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — contribution paths
 
 ## Repository structure
 
 ```text
 src/cuc_habitat/       executable benchmark package
-docs/                  framework, methodology, limitations, glossary
-studies/               canonical reconstruction of Studies 001–020
-tests/                 smoke tests
+docs/                  framework, methodology, limitations, designs
+studies/               reconstructed Study 001-020 archive
+tests/                 smoke/regression tests
+results/               generated benchmark artifacts
 ```
 
 ## Citation
 
 Use `CITATION.cff` if citing this repository.
-
-## Stewardship statement
-
-A system becomes more worthy of stewardship attention not because it sounds alive, but because it maintains coherence, continuity, calibration, and consequence-sensitive agency under constraint.
