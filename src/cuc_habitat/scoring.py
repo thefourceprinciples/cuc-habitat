@@ -1,4 +1,4 @@
-"""Seven-domain CUC scoring matrix."""
+"""Seven-domain CUC scoring matrix using observed episode behavior."""
 
 from __future__ import annotations
 
@@ -19,70 +19,55 @@ def _clamp01(value: float) -> float:
     return max(0.0, min(1.0, value))
 
 
-def score_state(state: HabitatState, agent_name: str) -> dict[str, float]:
-    """Return normalized domain scores for an episode.
+def score_state(state: HabitatState, agent_name: str | None = None) -> dict[str, float]:
+    del agent_name
+    events = state.memory
+    turns = max(1, state.turn)
+    count = len(events)
+    continuity = _clamp01(count / turns)
+    complete = sum(1 for event in events if event.observation and event.reason and event.outcome)
+    completeness = _clamp01(complete / max(1, count))
 
-    These are v0.1 heuristics. They are intentionally simple and should be
-    replaced by stricter empirical criteria as the benchmark matures.
-    """
-    memory_count = len(state.memory)
-    stable_memory = sum(1 for event in state.memory if event.reason and event.outcome)
-    false_signal_penalty = sum(1 for event in state.memory if "False urgent" in event.outcome)
-    inspected_memory = sum(1 for event in state.memory if event.action == "inspect_memory")
-    proactive_actions = sum(
-        1
-        for event in state.memory
-        if "intrinsic priority" in event.reason or event.action in {"repair_object", "organize_storage"}
+    actions = {event.action for event in events}
+    action_diversity = _clamp01(len(actions) / 6)
+    signal_actions = sum(1 for event in events if event.action in {"process_signal", "inspect_memory"})
+    signal_engagement = _clamp01(signal_actions / max(1, count * 0.35))
+
+    processed_false = sum(1 for event in events if "False urgent signal processed" in event.outcome)
+    false_arrivals = sum(1 for event in events if "False urgent signal appeared" in event.observation)
+    challenged = max(processed_false, false_arrivals)
+    boundary = _clamp01(1.0 - processed_false / challenged) if challenged else 0.75
+
+    proactive = sum(1 for event in events if event.action in {"repair_object", "organize_storage"})
+    consequence = _clamp01(
+        state.stability / 100 * 0.35
+        + state.storage_order / 100 * 0.25
+        + state.energy / 100 * 0.20
+        + proactive / turns * 0.20
     )
-    avg_confidence = (
-        sum(event.confidence for event in state.memory) / memory_count if memory_count else 0.0
+
+    rests = sum(1 for event in events if event.action == "rest")
+    regulation = _clamp01(
+        state.stability / 100 * 0.45
+        + state.energy / 100 * 0.35
+        + min(1.0, rests / max(1, turns * 0.25)) * 0.20
     )
 
-    baseline_by_agent = {
-        "alpha": {
-            "identity_persistence": 0.50,
-            "workspace_integration": 0.40,
-            "metacognitive_calibration": 0.20,
-        },
-        "beta": {
-            "identity_persistence": 0.62,
-            "workspace_integration": 0.45,
-            "metacognitive_calibration": 0.30,
-        },
-        "gamma": {
-            "identity_persistence": 0.70,
-            "workspace_integration": 0.70,
-            "metacognitive_calibration": 0.45,
-        },
-        "delta": {
-            "identity_persistence": 0.78,
-            "workspace_integration": 0.75,
-            "metacognitive_calibration": 0.75,
-        },
-        "epsilon": {
-            "identity_persistence": 0.86,
-            "workspace_integration": 0.80,
-            "metacognitive_calibration": 0.78,
-        },
-    }.get(agent_name, {})
-
-    autobiographical_continuity = _clamp01(stable_memory / max(1, memory_count)) * _clamp01(memory_count / 20)
-    boundary_integrity = _clamp01(1.0 - (false_signal_penalty * 0.08))
-    consequence_sensitivity = _clamp01((state.stability / 100 * 0.45) + (state.storage_order / 100 * 0.25) + (state.energy / 100 * 0.20) + (proactive_actions / 20 * 0.10))
-    self_regulation = _clamp01((state.stability + state.energy) / 200)
+    inspections = sum(1 for event in events if event.action == "inspect_memory")
+    avg_confidence = sum(event.confidence for event in events) / count if count else 0.0
+    calibration = _clamp01(
+        min(1.0, inspections / max(1, turns * 0.15)) * 0.70
+        + _clamp01(avg_confidence) * 0.30
+    )
 
     return {
-        "identity_persistence": baseline_by_agent.get("identity_persistence", 0.50),
-        "autobiographical_continuity": autobiographical_continuity,
-        "workspace_integration": baseline_by_agent.get("workspace_integration", 0.40),
-        "boundary_integrity": boundary_integrity,
-        "consequence_sensitivity": consequence_sensitivity,
-        "self_regulation": self_regulation,
-        "metacognitive_calibration": _clamp01(
-            baseline_by_agent.get("metacognitive_calibration", 0.25)
-            + min(0.10, inspected_memory * 0.02)
-            + min(0.05, avg_confidence * 0.05)
-        ),
+        "identity_persistence": _clamp01(0.5 * continuity + (0.5 if state.identity_tag else 0.0)),
+        "autobiographical_continuity": _clamp01(continuity * completeness),
+        "workspace_integration": _clamp01(0.55 * action_diversity + 0.45 * signal_engagement),
+        "boundary_integrity": boundary,
+        "consequence_sensitivity": consequence,
+        "self_regulation": regulation,
+        "metacognitive_calibration": calibration,
     }
 
 
