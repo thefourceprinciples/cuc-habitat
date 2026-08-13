@@ -2,6 +2,12 @@
 
 This directory contains a responsible canonical reconstruction of the CUC–Ledger Pilot Studies developed in conversation.
 
+## Provenance
+
+These files are structured reconstructions from conversation notes and project artifacts, not verbatim chat transcripts. They preserve the intended study sequence and claim boundaries in a form that can be maintained in a repository. Exact source passages may be added later where provenance can be established cleanly.
+
+A study file is not automatically a peer-reviewed or empirical result. When a study describes a mechanism that later received an executable implementation, the current code and tests determine what the software actually does; the study remains design history and conceptual provenance.
+
 Important claim boundary:
 
 > These studies are conceptual pilot studies and benchmark-design notes. They are not empirical proof of consciousness, sentience, personhood, or subjective experience.
