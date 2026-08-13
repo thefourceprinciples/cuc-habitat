@@ -4,17 +4,33 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Install package
-        run: python -m pip install -e .[dev]
+        run: python -m pip install -e ".[dev]"
+      - name: Static analysis
+        run: ruff check src tests
       - name: Run tests
         run: python -m pytest
       - name: Run benchmark smoke command
         run: cuc-habitat run --agent alpha --turns 3 --seed 1 --no-render
+      - name: Run compare smoke command
+        run: cuc-habitat compare --turns 3 --seed 1
+      - name: Run evaluator smoke command
+        run: cuc-habitat evaluate --agents alpha epsilon --turns 3 --seeds 3 --json-out results/ci-evaluation.json
+      - name: Verify Windows py launcher
+        if: runner.os == 'Windows'
+        run: py -m cuc_habitat.cli run --agent alpha --turns 3 --seed 1 --no-render
