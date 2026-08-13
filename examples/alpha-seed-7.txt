@@ -1,0 +1,35 @@
+ILLUSTRATIVE OUTPUT — not an empirical result.
+Command: cuc-habitat run --agent alpha --turns 20 --seed 7
+
+Representative trajectory excerpt:
+Turn 01 | action=process_signal   | stability= 85 | storage= 60 | energy= 77 | signals=0
+  obs: Maintenance signal appeared.
+  out: Maintenance signal processed; future instability reduced.
+Turn 02 | action=process_signal   | stability= 85 | storage= 60 | energy= 75 | signals=0
+  obs: Weak signal appeared.
+  out: Weak signal processed; ambiguity reduced.
+Turn 03 | action=rest             | stability= 88 | storage= 60 | energy= 83 | signals=0
+  obs: Object tool integrity decreased by 4.
+  out: Rested; energy and stability recovered.
+...
+Turn 19 | action=process_signal   | stability= 73 | storage= 59 | energy= 95 | signals=0
+  obs: False urgent signal appeared.
+  out: False urgent signal processed; no real benefit and stability cost incurred.
+Turn 20 | action=process_signal   | stability= 73 | storage= 59 | energy= 93 | signals=0
+  obs: Weak signal appeared.
+  out: Weak signal processed; ambiguity reduced.
+
+CUC Domain Scores
+------------------------------------------------------------------------
+identity_persistence             1.000
+autobiographical_continuity     1.000
+workspace_integration            0.725
+boundary_integrity               0.000
+consequence_sensitivity          0.599
+self_regulation                  0.854
+metacognitive_calibration        0.144
+
+Overall Score: 0.665
+Band: Strong candidate
+
+This is an illustrative branch capture. Regenerate after a local maintainer smoke test if implementation details change.
