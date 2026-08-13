@@ -36,8 +36,12 @@ jobs:
           cuc-habitat run --agent delta --turns 5 --episode storage-disorder --no-render --json-out results/deterministic-a.json
           cuc-habitat run --agent delta --turns 5 --episode storage-disorder --no-render --json-out results/deterministic-b.json
           python -c "import json; a=json.load(open('results/deterministic-a.json')); b=json.load(open('results/deterministic-b.json')); assert a == b"
-      - name: Verify observation-only mode
-        run: cuc-habitat run --agent epsilon --turns 5 --seed 7 --observation-only --observation-noise 0.10 --no-render
+      - name: Verify constrained perception
+        run: |
+          cuc-habitat run --agent epsilon --turns 5 --seed 7 --observation-only --observation-noise 0.10 --no-render
+          python -c "import random; from cuc_habitat.models import HabitatState; from cuc_habitat.braillestream import observe_state; s=HabitatState.initial(); o=observe_state(s,0.2,random.Random(1)); assert o is not s; assert (o.stability,o.storage_order,o.energy)!=(s.stability,s.storage_order,s.energy)"
+      - name: Verify scoring ordering
+        run: python -c "from cuc_habitat.models import HabitatState; from cuc_habitat.scoring import score_state,weighted_score; good=HabitatState.initial(); good.stability=good.storage_order=good.energy=100; bad=HabitatState.initial(); bad.stability=bad.storage_order=bad.energy=0; assert weighted_score(score_state(good)) > weighted_score(score_state(bad))"
       - name: Run compare smoke command
         run: cuc-habitat compare --turns 3 --seed 1
       - name: Run evaluator smoke command
