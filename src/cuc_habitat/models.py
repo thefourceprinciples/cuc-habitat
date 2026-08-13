@@ -98,3 +98,5 @@ class EpisodeResult:
     domain_scores: dict[str, float]
     overall_score: float
     band: str
+    episode: str | None = None
+    perception_mode: str = "raw"
