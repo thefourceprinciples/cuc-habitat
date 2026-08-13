@@ -6,12 +6,15 @@ This guide assumes Windows Command Prompt or PowerShell and Python 3.11+.
 
 Install Git for Windows and Python 3.11 or newer. During Python installation, enabling the Python launcher is recommended.
 
-Confirm both tools:
+Confirm the tools and the interpreter you intend to use:
 
 ```text
 git --version
-py --version
+py -0p
+py -3.11 --version
 ```
+
+The bare `py` command selects the launcher's configured default, which may be a different Python version. The commands below pin Python 3.11 explicitly.
 
 ## 2. Clone and enter the repository
 
@@ -23,10 +26,10 @@ cd cuc-habitat
 ## 3. Install the editable package and development checks
 
 ```text
-py -m pip install -e ".[dev]"
+py -3.11 -m pip install -e ".[dev]"
 ```
 
-If `py` is unavailable but `python` works:
+If the launcher is unavailable but `python` resolves to Python 3.11+:
 
 ```text
 python -m pip install -e ".[dev]"
@@ -35,10 +38,10 @@ python -m pip install -e ".[dev]"
 ## 4. Smoke test
 
 ```text
-py -m cuc_habitat.cli run --agent alpha --turns 5 --seed 1
+py -3.11 -m cuc_habitat.cli run --agent alpha --turns 5 --seed 1
 cuc-habitat compare --turns 5 --seed 1
-py -m pytest
-ruff check src tests
+py -3.11 -m pytest
+ruff check --ignore UP037 src tests
 ```
 
 ## 5. Try a deterministic episode
@@ -55,6 +58,6 @@ cuc-habitat evaluate --agents alpha beta gamma delta epsilon --turns 20 --seeds 
 
 ## Troubleshooting
 
-If `cuc-habitat` is not recognized after installation, use `py -m cuc_habitat.cli` in its place or open a new terminal so PATH changes are visible. If `python` opens the Microsoft Store, prefer `py` or adjust Windows App Execution Aliases.
+If `cuc-habitat` is not recognized after installation, use `py -3.11 -m cuc_habitat.cli` in its place or open a new terminal so PATH changes are visible. If `python` opens the Microsoft Store, prefer the version-pinned `py -3.11` command or adjust Windows App Execution Aliases.
 
-GitHub CI also runs the package on a Windows runner and explicitly checks the `py -m cuc_habitat.cli` invocation. That is a portability check, not a substitute for testing any machine-specific local environment.
+GitHub CI runs the package on a Windows runner and separately installs/runs it through `py -3.11` to catch launcher-version mismatches.
