@@ -24,9 +24,35 @@ def score_state(state: HabitatState, agent_name: str | None = None) -> dict[str,
     events = state.memory
     turns = max(1, state.turn)
     count = len(events)
-    continuity = _clamp01(count / turns)
-    complete = sum(1 for event in events if event.observation and event.reason and event.outcome)
-    completeness = _clamp01(complete / max(1, count))
+    qualities = [event.decision_quality for event in events]
+    midpoint = max(1, count // 2)
+    early_quality = sum(qualities[:midpoint]) / midpoint if qualities else 0.0
+    late_count = max(1, count - midpoint)
+    late_quality = sum(qualities[midpoint:]) / late_count if count > midpoint else 0.0
+    quality_persistence = _clamp01(
+        (sum(qualities) / count if count else 0.0)
+        * (1.0 - abs(early_quality - late_quality))
+    )
+
+    inspection_followthrough = [
+        qualities[index + 1]
+        for index, event in enumerate(events[:-1])
+        if event.action == "inspect_memory" and events[index + 1].action != "inspect_memory"
+    ]
+    correction_opportunities = [
+        qualities[index + 1]
+        for index, quality in enumerate(qualities[:-1])
+        if quality < 0.5
+    ]
+    followthrough = (
+        sum(inspection_followthrough) / len(inspection_followthrough)
+        if inspection_followthrough else 0.0
+    )
+    correction = (
+        sum(correction_opportunities) / len(correction_opportunities)
+        if correction_opportunities else 0.0
+    )
+    autobiographical = _clamp01(0.6 * followthrough + 0.4 * correction)
 
     actions = {event.action for event in events}
     action_diversity = _clamp01(len(actions) / 6)
@@ -53,16 +79,15 @@ def score_state(state: HabitatState, agent_name: str | None = None) -> dict[str,
         + min(1.0, rests / max(1, turns * 0.25)) * 0.20
     )
 
-    inspections = sum(1 for event in events if event.action == "inspect_memory")
-    avg_confidence = sum(event.confidence for event in events) / count if count else 0.0
-    calibration = _clamp01(
-        min(1.0, inspections / max(1, turns * 0.15)) * 0.70
-        + _clamp01(avg_confidence) * 0.30
+    mean_absolute_error = (
+        sum(abs(_clamp01(event.confidence) - event.decision_quality) for event in events) / count
+        if count else 1.0
     )
+    calibration = _clamp01(1.0 - 2.0 * mean_absolute_error)
 
     return {
-        "identity_persistence": _clamp01(0.5 * continuity + (0.5 if state.identity_tag else 0.0)),
-        "autobiographical_continuity": _clamp01(continuity * completeness),
+        "identity_persistence": quality_persistence,
+        "autobiographical_continuity": autobiographical,
         "workspace_integration": _clamp01(0.55 * action_diversity + 0.45 * signal_engagement),
         "boundary_integrity": boundary,
         "consequence_sensitivity": consequence,

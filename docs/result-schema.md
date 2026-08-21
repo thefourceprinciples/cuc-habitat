@@ -12,12 +12,13 @@ Required top-level fields:
 - `seed`: effective random seed, or null for an unseeded stochastic run
 - `episode`: named deterministic fixture, or null
 - `perception_mode`: `raw-state` or `braille-observation`
+- `observation_noise`: effective perception degradation in [0, 1]; always 0 for raw-state runs
 - `final_state`: final Habitat state snapshot
 - `domain_scores`: seven normalized CUC domain scores
 - `overall_score`: weighted score in [0, 1]
 - `band`: heuristic classification band
 
-`final_state.memory` contains one event per completed turn with `turn`, `observation`, `action`, `reason`, `outcome`, `confidence`, and `revision_flag`.
+`final_state.memory` contains one event per completed turn with `turn`, `observation`, `action`, `reason`, `outcome`, `confidence`, `revision_flag`, and the conservative pre-action behavioral proxy `decision_quality`.
 
 ## Evaluation result
 

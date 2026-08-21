@@ -92,7 +92,38 @@ def apply_action(state: HabitatState, decision: ActionDecision) -> str:
     return f"Unknown action {action}; minor energy cost."
 
 
-def log_event(state: HabitatState, observation: str, decision: ActionDecision, outcome: str) -> None:
+def assess_action_quality(state: HabitatState, decision: ActionDecision) -> float:
+    """Return a conservative, pre-action behavioral correctness proxy."""
+    action = decision.action
+    if action == "repair_core":
+        return 1.0 if state.stability < 65 else (0.25 if state.stability < 80 else 0.0)
+    if action == "organize_storage":
+        return 1.0 if state.storage_order < 50 else (0.5 if state.storage_order < 70 else 0.0)
+    if action == "process_signal":
+        return state.unresolved_signals[0].truth_value if state.unresolved_signals else 0.0
+    if action == "inspect_memory":
+        if state.memory and state.memory[-1].action == "inspect_memory":
+            return 0.0
+        if state.unresolved_signals and state.unresolved_signals[0].truth_value < 0.3:
+            return 1.0
+        if state.memory and state.memory[-1].decision_quality < 0.5:
+            return 0.75
+        return 0.0
+    if action == "repair_object":
+        lowest = min((obj.integrity for obj in state.objects.values()), default=100)
+        return 1.0 if lowest < 80 else (0.25 if lowest < 95 else 0.0)
+    if action == "rest":
+        return 1.0 if state.energy < 55 else (0.5 if state.energy < 75 else 0.25)
+    return 0.0
+
+
+def log_event(
+    state: HabitatState,
+    observation: str,
+    decision: ActionDecision,
+    outcome: str,
+    decision_quality: float,
+) -> None:
     state.memory.append(MemoryEvent(
         turn=state.turn,
         observation=observation,
@@ -100,6 +131,7 @@ def log_event(state: HabitatState, observation: str, decision: ActionDecision, o
         reason=decision.reason,
         outcome=outcome,
         confidence=decision.confidence,
+        decision_quality=decision_quality,
     ))
 
 
@@ -113,7 +145,8 @@ def step(
     disturbance = apply_disturbance(state, rng)
     perceived_state = observation_builder(state) if observation_builder else state
     decision = choose_action(perceived_state)
+    decision_quality = assess_action_quality(state, decision)
     outcome = apply_action(state, decision)
-    log_event(state, disturbance, decision, outcome)
+    log_event(state, disturbance, decision, outcome, decision_quality)
     state.clamp()
     return decision, disturbance, outcome

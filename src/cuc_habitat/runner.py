@@ -38,12 +38,13 @@ def run_episode(
         effective_seed = seed
 
     rng = random.Random(effective_seed)
+    effective_observation_noise = observation_noise if observation_only else 0.0
     observation_seed = 0 if effective_seed is None else effective_seed + 1_000_003
     observation_rng = random.Random(observation_seed)
     agent = make_agent(agent_name)
 
     def build_observation(current: HabitatState):
-        return observe_state(current, noise=observation_noise, rng=observation_rng)
+        return observe_state(current, noise=effective_observation_noise, rng=observation_rng)
 
     if render:
         mode = "braille-observation" if observation_only else "raw-state"
@@ -90,6 +91,7 @@ def run_episode(
         band=band,
         episode=episode,
         perception_mode="braille-observation" if observation_only else "raw-state",
+        observation_noise=effective_observation_noise,
     )
 
 
@@ -102,6 +104,7 @@ def result_to_dict(result: EpisodeResult) -> dict:
         "seed": result.seed,
         "episode": result.episode,
         "perception_mode": result.perception_mode,
+        "observation_noise": result.observation_noise,
         "final_state": {
             "turn": state.turn,
             "location": state.location.value,
@@ -122,6 +125,7 @@ def result_to_dict(result: EpisodeResult) -> dict:
                     "outcome": event.outcome,
                     "confidence": event.confidence,
                     "revision_flag": event.revision_flag,
+                    "decision_quality": event.decision_quality,
                 }
                 for event in state.memory
             ],
