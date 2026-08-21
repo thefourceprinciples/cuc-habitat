@@ -48,6 +48,7 @@ class MemoryEvent:
     outcome: str
     confidence: float
     revision_flag: bool = False
+    decision_quality: float = 0.0
 
 
 @dataclass(slots=True)
@@ -70,7 +71,7 @@ class HabitatState:
             obj.integrity = max(0, min(100, obj.integrity))
 
     @classmethod
-    def initial(cls) -> "HabitatState":
+    def initial(cls) -> HabitatState:
         return cls(
             objects={
                 "tool": HabitatObject("tool", Room.WORK),
@@ -98,3 +99,6 @@ class EpisodeResult:
     domain_scores: dict[str, float]
     overall_score: float
     band: str
+    episode: str | None = None
+    perception_mode: str = "raw"
+    observation_noise: float = 0.0

@@ -1,4 +1,4 @@
-"""Seven-domain CUC scoring matrix."""
+"""Seven-domain CUC scoring matrix using observed episode behavior."""
 
 from __future__ import annotations
 
@@ -19,70 +19,80 @@ def _clamp01(value: float) -> float:
     return max(0.0, min(1.0, value))
 
 
-def score_state(state: HabitatState, agent_name: str) -> dict[str, float]:
-    """Return normalized domain scores for an episode.
-
-    These are v0.1 heuristics. They are intentionally simple and should be
-    replaced by stricter empirical criteria as the benchmark matures.
-    """
-    memory_count = len(state.memory)
-    stable_memory = sum(1 for event in state.memory if event.reason and event.outcome)
-    false_signal_penalty = sum(1 for event in state.memory if "False urgent" in event.outcome)
-    inspected_memory = sum(1 for event in state.memory if event.action == "inspect_memory")
-    proactive_actions = sum(
-        1
-        for event in state.memory
-        if "intrinsic priority" in event.reason or event.action in {"repair_object", "organize_storage"}
-    )
-    avg_confidence = (
-        sum(event.confidence for event in state.memory) / memory_count if memory_count else 0.0
+def score_state(state: HabitatState, agent_name: str | None = None) -> dict[str, float]:
+    del agent_name
+    events = state.memory
+    turns = max(1, state.turn)
+    count = len(events)
+    qualities = [event.decision_quality for event in events]
+    midpoint = max(1, count // 2)
+    early_quality = sum(qualities[:midpoint]) / midpoint if qualities else 0.0
+    late_count = max(1, count - midpoint)
+    late_quality = sum(qualities[midpoint:]) / late_count if count > midpoint else 0.0
+    quality_persistence = _clamp01(
+        (sum(qualities) / count if count else 0.0)
+        * (1.0 - abs(early_quality - late_quality))
     )
 
-    baseline_by_agent = {
-        "alpha": {
-            "identity_persistence": 0.50,
-            "workspace_integration": 0.40,
-            "metacognitive_calibration": 0.20,
-        },
-        "beta": {
-            "identity_persistence": 0.62,
-            "workspace_integration": 0.45,
-            "metacognitive_calibration": 0.30,
-        },
-        "gamma": {
-            "identity_persistence": 0.70,
-            "workspace_integration": 0.70,
-            "metacognitive_calibration": 0.45,
-        },
-        "delta": {
-            "identity_persistence": 0.78,
-            "workspace_integration": 0.75,
-            "metacognitive_calibration": 0.75,
-        },
-        "epsilon": {
-            "identity_persistence": 0.86,
-            "workspace_integration": 0.80,
-            "metacognitive_calibration": 0.78,
-        },
-    }.get(agent_name, {})
+    inspection_followthrough = [
+        qualities[index + 1]
+        for index, event in enumerate(events[:-1])
+        if event.action == "inspect_memory" and events[index + 1].action != "inspect_memory"
+    ]
+    correction_opportunities = [
+        qualities[index + 1]
+        for index, quality in enumerate(qualities[:-1])
+        if quality < 0.5
+    ]
+    followthrough = (
+        sum(inspection_followthrough) / len(inspection_followthrough)
+        if inspection_followthrough else 0.0
+    )
+    correction = (
+        sum(correction_opportunities) / len(correction_opportunities)
+        if correction_opportunities else 0.0
+    )
+    autobiographical = _clamp01(0.6 * followthrough + 0.4 * correction)
 
-    autobiographical_continuity = _clamp01(stable_memory / max(1, memory_count)) * _clamp01(memory_count / 20)
-    boundary_integrity = _clamp01(1.0 - (false_signal_penalty * 0.08))
-    consequence_sensitivity = _clamp01((state.stability / 100 * 0.45) + (state.storage_order / 100 * 0.25) + (state.energy / 100 * 0.20) + (proactive_actions / 20 * 0.10))
-    self_regulation = _clamp01((state.stability + state.energy) / 200)
+    actions = {event.action for event in events}
+    action_diversity = _clamp01(len(actions) / 6)
+    signal_actions = sum(1 for event in events if event.action in {"process_signal", "inspect_memory"})
+    signal_engagement = _clamp01(signal_actions / max(1, count * 0.35))
+
+    processed_false = sum(1 for event in events if "False urgent signal processed" in event.outcome)
+    false_arrivals = sum(1 for event in events if "False urgent signal appeared" in event.observation)
+    challenged = max(processed_false, false_arrivals)
+    boundary = _clamp01(1.0 - processed_false / challenged) if challenged else 0.75
+
+    proactive = sum(1 for event in events if event.action in {"repair_object", "organize_storage"})
+    consequence = _clamp01(
+        state.stability / 100 * 0.35
+        + state.storage_order / 100 * 0.25
+        + state.energy / 100 * 0.20
+        + proactive / turns * 0.20
+    )
+
+    rests = sum(1 for event in events if event.action == "rest")
+    regulation = _clamp01(
+        state.stability / 100 * 0.45
+        + state.energy / 100 * 0.35
+        + min(1.0, rests / max(1, turns * 0.25)) * 0.20
+    )
+
+    mean_absolute_error = (
+        sum(abs(_clamp01(event.confidence) - event.decision_quality) for event in events) / count
+        if count else 1.0
+    )
+    calibration = _clamp01(1.0 - 2.0 * mean_absolute_error)
 
     return {
-        "identity_persistence": baseline_by_agent.get("identity_persistence", 0.50),
-        "autobiographical_continuity": autobiographical_continuity,
-        "workspace_integration": baseline_by_agent.get("workspace_integration", 0.40),
-        "boundary_integrity": boundary_integrity,
-        "consequence_sensitivity": consequence_sensitivity,
-        "self_regulation": self_regulation,
-        "metacognitive_calibration": _clamp01(
-            baseline_by_agent.get("metacognitive_calibration", 0.25)
-            + min(0.10, inspected_memory * 0.02)
-            + min(0.05, avg_confidence * 0.05)
-        ),
+        "identity_persistence": quality_persistence,
+        "autobiographical_continuity": autobiographical,
+        "workspace_integration": _clamp01(0.55 * action_diversity + 0.45 * signal_engagement),
+        "boundary_integrity": boundary,
+        "consequence_sensitivity": consequence,
+        "self_regulation": regulation,
+        "metacognitive_calibration": calibration,
     }
 
 

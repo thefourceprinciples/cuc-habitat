@@ -1,0 +1,8 @@
+flowchart LR
+    S[World state] --> D[Disturbance]
+    D --> O[BrailleStream observation]
+    O --> A[Agent decision]
+    A --> U[World update]
+    U --> M[Event memory]
+    M --> C[Score]
+    U --> S

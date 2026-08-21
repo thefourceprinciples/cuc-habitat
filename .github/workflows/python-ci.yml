@@ -4,17 +4,52 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Install package
-        run: python -m pip install -e .[dev]
+        run: python -m pip install -e ".[dev]"
+      - name: Static analysis
+        run: ruff check --ignore UP037 src tests
       - name: Run tests
         run: python -m pytest
+      - name: Verify CLI help
+        run: |
+          cuc-habitat --help
+          cuc-habitat run --help
       - name: Run benchmark smoke command
-        run: cuc-habitat run --agent alpha --turns 3 --seed 1 --no-render
+        run: cuc-habitat run --agent alpha --turns 3 --seed 1 --no-render --json-out results/ci-episode.json
+      - name: Verify deterministic episode
+        run: |
+          cuc-habitat run --agent delta --turns 5 --episode storage-disorder --no-render --json-out results/deterministic-a.json
+          cuc-habitat run --agent delta --turns 5 --episode storage-disorder --no-render --json-out results/deterministic-b.json
+          python -c "import json; a=json.load(open('results/deterministic-a.json')); b=json.load(open('results/deterministic-b.json')); assert a == b"
+      - name: Verify constrained perception
+        run: |
+          cuc-habitat run --agent epsilon --turns 5 --seed 7 --observation-only --observation-noise 0.10 --no-render
+          python -c "import random; from cuc_habitat.models import HabitatState; from cuc_habitat.braillestream import observe_state; s=HabitatState.initial(); o=observe_state(s,0.2,random.Random(1)); assert o is not s; assert (o.stability,o.storage_order,o.energy)!=(s.stability,s.storage_order,s.energy)"
+      - name: Verify scoring ordering
+        run: python -c "from cuc_habitat.models import HabitatState; from cuc_habitat.scoring import score_state,weighted_score; good=HabitatState.initial(); good.stability=good.storage_order=good.energy=100; bad=HabitatState.initial(); bad.stability=bad.storage_order=bad.energy=0; assert weighted_score(score_state(good)) > weighted_score(score_state(bad))"
+      - name: Run compare smoke command
+        run: cuc-habitat compare --turns 3 --seed 1
+      - name: Run evaluator smoke command
+        run: cuc-habitat evaluate --agents alpha epsilon --turns 3 --seeds 3 --json-out results/ci-evaluation.json
+      - name: Verify JSON exports and score bounds
+        run: python -c "import json; a=json.load(open('results/ci-episode.json')); e=json.load(open('results/ci-evaluation.json')); assert {'schema_version','agent','turns','final_state','domain_scores','overall_score','band'} <= set(a); assert {'schema_version','turns','seed_count','agents'} <= set(e); assert all(0.0 <= v <= 1.0 for v in a['domain_scores'].values())"
+      - name: Verify Windows py launcher
+        if: runner.os == 'Windows'
+        run: |
+          py -3.11 -m pip install -e ".[dev]"
+          py -3.11 -m cuc_habitat.cli run --agent alpha --turns 3 --seed 1 --no-render

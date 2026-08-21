@@ -1,0 +1,12 @@
+ILLUSTRATIVE OUTPUT — not an empirical result.
+Command: cuc-habitat compare --turns 20 --seed 7
+
+Comparing agents | turns=20 | seed=7 | episode=stochastic
+------------------------------------------------------------------------
+alpha    score=0.665 band=Strong candidate
+beta     score=0.665 band=Strong candidate
+delta    score=0.768 band=Strong candidate
+epsilon  score=0.768 band=Strong candidate
+gamma    score=0.768 band=Strong candidate
+
+This capture reflects the v0.2 branch scoring path. Regenerate after a local maintainer smoke test if implementation details change.
